@@ -62,9 +62,6 @@ com.geertwille = {
         [panel setCanChooseDirectories: true];
         [panel setCanChooseFiles: false];
         [panel setCanCreateDirectories: true];
-        var defaultDir = com.geertwille.document.fileURL().URLByDeletingLastPathComponent();
-        [panel setDirectoryURL:defaultDir];
-
 
         if ([panel runModal] == NSOKButton) {
             var message = [panel filename];
