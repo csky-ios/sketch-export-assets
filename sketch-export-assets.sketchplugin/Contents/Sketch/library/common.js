@@ -59,6 +59,7 @@ com.geertwille = {
     getDirFromPrompt: function() {
         var panel = [NSOpenPanel openPanel];
         [panel setMessage:"Where do you want to place your assets?"];
+        [panel setPrompt:"Export"];
         [panel setCanChooseDirectories: true];
         [panel setCanChooseFiles: false];
         [panel setCanCreateDirectories: true];
