@@ -43,10 +43,12 @@ com.geertwille = {
         }
 
         // Open finder window with assets exported
-        if (this.baseDir.indexOf('/res') > -1 && this.type == "android") {
-            helpers.openInFinder(this.baseDir);
-        } else {
-            helpers.openInFinder(this.baseDir + "/assets");
+        if (config['open-folder-export'] == true) {
+            if (this.baseDir.indexOf('/res') > -1 && this.type == "android") {
+                helpers.openInFinder(this.baseDir);
+            } else {
+                helpers.openInFinder(this.baseDir + "/assets");
+            }
         }
     },
 
@@ -76,6 +78,7 @@ com.geertwille = {
             densityScales     = ['@1x', '@2x', '@3x'],
             densityScale,
             askForPrefix,
+            openFolderExport,
             settings
         ;
 
@@ -83,20 +86,23 @@ com.geertwille = {
         settings = this.readConfig();
         densityScale = [settings valueForKey:@"density-scale"];
         askForPrefix = [settings valueForKey:@"ask-for-prefix"];
+        openFolderExport = [settings valueForKey:@"open-folder-export"];
 
         [settingsInput setMessageText:@'Change settings'];
         [settingsInput addAccessoryView: helpers.createSelect(densityScales, densityScale)];
-        [settingsInput addAccessoryView: helpers.createCheckbox({name:'Ask for prefix on export', value:'1'}, askForPrefix)];
+        [settingsInput addAccessoryView: helpers.createPrefixCheckbox({name:'Ask for prefix on export', value:'1'}, askForPrefix)];
+        [settingsInput addAccessoryView: helpers.createOpenCheckbox({name:'Open folder on export', value:'1'}, openFolderExport)];
 
         [settingsInput addButtonWithTitle:@'Save'];
         [settingsInput addButtonWithTitle:@'Cancel'];
 
         var responseCode = settingsInput.runModal();
 
-        if (1000 == responseCode ) {
+        if ( 1000 == responseCode ) {
             // +1 because 0 means @1x
-            densityScale = [[settingsInput viewAtIndex:0] indexOfSelectedItem] + 1;
-            helpers.saveJsonToFile([NSDictionary dictionaryWithObjectsAndKeys:densityScale, @"density-scale", [[settingsInput viewAtIndex:1] state], @"ask-for-prefix", nil], folders.sketchPluginsPath + folders.pluginFolder + '/config.json');
+            //densityScale = [[settingsInput viewAtIndex:0] indexOfSelectedItem] // + 1;
+            densityScale = [[settingsInput viewAtIndex:0] indexOfSelectedItem]; // let user choose the density they prefer
+            helpers.saveJsonToFile([NSDictionary dictionaryWithObjectsAndKeys:densityScale, @"density-scale", [[settingsInput viewAtIndex:1] state], @"ask-for-prefix", [[settingsInput viewAtIndex:2] state], @"open-folder-export", nil], folders.sketchPluginsPath + folders.pluginFolder + '/config.json');
         }
 
         return this.readConfig();
@@ -132,11 +138,16 @@ com.geertwille = {
             }
 
             // If we place the assets in the res folder don't place it in an assets/android folder
+
             if (this.baseDir.indexOf('/res') > -1 && this.type == "android") {
-                fileName = this.baseDir + name + "/" + prefix + sliceName + suffix + ".png";
-            } else {
-                fileName = this.baseDir + "/assets/" + this.type + name + "/" + prefix + sliceName + suffix + ".png";
-            }
+               fileName = this.baseDir + name + "/" + prefix + sliceName + suffix + ".png";
+           } else {
+               if (this.baseDir.indexOf('/res') == -1 && this.type == "android") {
+                   fileName = this.baseDir + "/assets/android/res/" + name + "/" + prefix + sliceName + suffix + ".png";
+               } else {
+                   fileName = this.baseDir + "/assets/" + this.type + name + "/" + prefix + sliceName + suffix + ".png";
+               }
+           }
 
             [(com.geertwille.document) saveArtboardOrSlice: version toFile:fileName];
 
@@ -146,7 +157,8 @@ com.geertwille = {
 
     makeSliceAndResizeWithFactor: function(layer, factor) {
         var loopLayerChildren = [[layer children] objectEnumerator],
-            rect = [MSSliceTrimming trimmedRectForSlice:layer],
+            sliceLayerAncestry = [MSImmutableLayerAncestry ancestryWithMSLayer:layer];
+            rect = [MSSliceTrimming trimmedRectForLayerAncestry:sliceLayerAncestry];
             useSliceLayer = false,
             slice
         ;
@@ -154,7 +166,8 @@ com.geertwille = {
         // Check for MSSliceLayer and overwrite the rect if present
         while (layerChild = [loopLayerChildren nextObject]) {
             if ([layerChild class] == 'MSSliceLayer') {
-                rect  = [MSSliceTrimming trimmedRectForSlice:layerChild];
+                sliceLayerAncestry = [MSImmutableLayerAncestry ancestryWithMSLayer:layerChild];
+                rect = [MSSliceTrimming trimmedRectForLayerAncestry:sliceLayerAncestry];
                 useSliceLayer = true;
             }
         }
